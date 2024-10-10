@@ -4,6 +4,7 @@ pipeline {
     environment {
         NETLIFY_SITE_ID = 'cbb94c54-35d0-4f68-b9bb-904fb9530ef7'
         NETLIFY_AUTH_TOKEN = credentials('netlify-token')
+        
     }
 
     stages {
@@ -86,6 +87,28 @@ pipeline {
                     node_modules/.bin/netlify status
                     node_modules/.bin/netlify deploy --dir=build --prod
                 '''
+            }
+        }
+        stage('Prod E2E') {
+                    agent {
+                        docker {
+                            image 'mcr.microsoft.com/playwright:v1.39.0-jammy'
+                            reuseNode true
+                        }
+                    }
+                    environment {
+                        CI_ENVIRONMENT_URL = 'https://storied-gaufre-698773.netlify.app'
+                    }
+                    steps {
+                        
+                        sh '''
+                            npx playwright test --reporter=html
+                        '''
+                    }
+                            post {
+                always {
+                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'PlaywrightE2E HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+                }
             }
         }
 
